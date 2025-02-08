@@ -58,6 +58,7 @@ export default function LoginPage() {
             setFormData({...formData, email: e.target.value})}
           error={errors.email}
           required
+          className="text-black placeholder-gray-500"
         />
 
         <div className="relative">
@@ -71,6 +72,7 @@ export default function LoginPage() {
               setFormData({...formData, password: e.target.value})}
             error={errors.password}
             required
+            className="text-black placeholder-gray-500"
           />
           <button
             type="button"

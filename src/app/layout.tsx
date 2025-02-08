@@ -1,10 +1,10 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
 
-// -- 1) Font Setup
+// Font Setup
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// -- 2) Metadata
+// Metadata
 export const metadata: Metadata = {
   title: "EngagePerfect AI",
   description: "AI-powered engagement platform",
 };
 
-// -- 3) Root Layout
+// Root Layout
 export default function RootLayout({
   children,
 }: {
@@ -30,21 +30,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {/* Global Navbar */}
-        <nav className="flex gap-4 p-4 bg-gray-200">
-          <Link href="/" className="hover:text-blue-600">
-            Home
-          </Link>
-          <Link href="/login" className="hover:text-blue-600">
-            Login
-          </Link>
-          <Link href="/signup" className="hover:text-blue-600">
-            Sign Up
-          </Link>
-        </nav>
-
-        {/* Render all other pages */}
-        {children}
+        <Navbar />
+        <main className="pt-16">
+          {children}
+        </main>
       </body>
     </html>
   );
