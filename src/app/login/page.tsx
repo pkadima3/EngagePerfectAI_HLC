@@ -1,53 +1,121 @@
-"use client";  // <-- Add this line at the very top!
-import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
-import { useRouter } from 'next/navigation';
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { AuthButton, AuthInput, AuthCard, SocialLogin } from '@/components/auth';
+
+// Define what information we need for login
+interface FormData {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+}
+
+// Define what our error messages might look like
+interface Errors {
+  email?: string;
+  password?: string;
+}
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Add types to our form data and errors
+  const [formData, setFormData] = useState<FormData>({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
+  
+  const [errors, setErrors] = useState<Errors>({});
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Go back to the homepage
-      router.push('/');
-    } catch (error) {
-      console.error(error);
-      alert('Login failed!');
-    }
+    setIsLoading(true);
+    
+    // Add your login logic here
+    
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-2xl mb-4">Login</h1>
-      <form onSubmit={handleLogin} className="flex flex-col space-y-2">
-        <input
+    <AuthCard 
+      title="Welcome back" 
+      subtitle="Sign in to your account"
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <AuthInput
+          label="Email address"
           type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2"
+          placeholder="Enter your email"
+          icon={Mail}
+          value={formData.email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+            setFormData({...formData, email: e.target.value})}
+          error={errors.email}
+          required
         />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2"
-        />
-        <button type="submit" className="bg-blue-500 text-white py-2 px-4">
-          Log In
-        </button>
-      </form>
 
-      <Link href="/" className="mt-4 text-blue-500 underline">
-        Go back Home
-      </Link>
-    </div>
+        <div className="relative">
+          <AuthInput
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Enter your password"
+            icon={Lock}
+            value={formData.password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+              setFormData({...formData, password: e.target.value})}
+            error={errors.password}
+            required
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <input
+              id="remember-me"
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              checked={formData.rememberMe}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                setFormData({...formData, rememberMe: e.target.checked})}
+            />
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+              Remember me
+            </label>
+          </div>
+
+          <div className="text-sm">
+            <Link href="/forgot-password" className="text-blue-600 hover:text-blue-500">
+              Forgot password?
+            </Link>
+          </div>
+        </div>
+
+        <AuthButton type="submit" variant="primary" fullWidth isLoading={isLoading}>
+          Sign in
+        </AuthButton>
+
+        <SocialLogin />
+
+        <p className="text-center text-sm text-gray-600">
+          Don't have an account?{' '}
+          <Link href="/signup" className="text-blue-600 hover:text-blue-500">
+            Sign up
+          </Link>
+        </p>
+      </form>
+    </AuthCard>
   );
 }
