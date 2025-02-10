@@ -21,6 +21,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+console.log('Firebase initialized with config:', firebaseConfig);
 
 // -- 3) Optional: Safely initialize Analytics (client-side only)
 let analytics;
