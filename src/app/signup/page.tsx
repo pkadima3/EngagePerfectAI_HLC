@@ -1,3 +1,4 @@
+// src/app/signup/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -5,8 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { AuthButton, AuthInput, AuthCard, SocialLogin } from '@/components/auth';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase'; // Make sure this import matches your file structure
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore'; // Add this import
+import { auth, db } from '@/lib/firebase'; // Make sure to import db as well
 
 interface FormData {
   email: string;
@@ -76,25 +78,43 @@ export default function SignupPage() {
     setErrors({});
     
     try {
-      // Create user with email and password using the imported auth instance
+      // 1. Create the authentication user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       );
 
-      // Update user profile
       if (userCredential.user) {
+        // 2. Update the user's profile
         await updateProfile(userCredential.user, {
           displayName: formData.email.split('@')[0]
         });
-        
-        // Redirect to dashboard
-        router.push('/dashboard');
+
+        // 3. Create the user document in Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          fullName: formData.email.split('@')[0],
+          email: formData.email,
+          profilePicture: "",
+          subscriptionStatus: "free",
+          dateJoined: new Date(),
+          aiRequestsUsed: 0,
+          aiRequestsLimit: 20,
+          postsGenerated: 0,
+          postsDrafted: 0,
+          shares: {
+            twitter: 0,
+            linkedin: 0,
+            facebook: 0
+          },
+          recentPosts: []
+        });
+
+        // 4. Redirect to dashboard
+        router.push('/profile');
       }
-      
     } catch (error: any) {
-      console.error('Signup error:', error); // For debugging
+      console.error('Signup error:', error);
       
       let errorMessage = 'An error occurred during signup';
       

@@ -1,28 +1,31 @@
+// src/app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { AuthButton, AuthInput, AuthCard, SocialLogin } from '@/components/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
-// Define what information we need for login
 interface FormData {
   email: string;
   password: string;
   rememberMe: boolean;
 }
 
-// Define what our error messages might look like
 interface Errors {
   email?: string;
   password?: string;
+  general?: string;
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  // Add types to our form data and errors
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -34,12 +37,31 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrors({});
     
-    // Add your login logic here
-    
-    setTimeout(() => {
+    try {
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      router.push('/profile');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      let errorMessage = 'Failed to sign in';
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          errorMessage = 'Invalid email or password';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many attempts. Please try again later';
+          break;
+        default:
+          errorMessage = error.message;
+      }
+      
+      setErrors({ general: errorMessage });
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -48,6 +70,12 @@ export default function LoginPage() {
       subtitle="Sign in to your account"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {errors.general && (
+          <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+            {errors.general}
+          </div>
+        )}
+
         <AuthInput
           label="Email address"
           type="email"
