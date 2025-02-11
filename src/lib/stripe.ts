@@ -1,13 +1,18 @@
+
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not defined');
+// Client-side public key
+export const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+// Only initialize Stripe on the server side
+let stripe: Stripe | undefined;
+if (typeof window === 'undefined' && process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-01-27.acacia',
+  });
 }
 
-// Initialize Stripe
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-01-27.acacia', // Updated with correct version format
-});
+export { stripe };
 
 // Plan Configuration
 export const PLANS = {
