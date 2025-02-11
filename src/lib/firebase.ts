@@ -10,23 +10,26 @@ import { getStorage } from 'firebase/storage';
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBOyhXNmNsb8eULbU_bZJUR2a9fzHJraS0",
-  authDomain: "engperfectaiproj.firebaseapp.com",
-  projectId: "engperfectaiproj",
-  storageBucket: "engperfectaiproj.firebasestorage.app",
-  messagingSenderId: "145194076455",
-  appId: "1:145194076455:web:ee8be162ede182c8640102",
-  measurementId: "G-5XML9SZY5J"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-console.log('Firebase initialized with config:', firebaseConfig);
 
 // -- 3) Optional: Safely initialize Analytics (client-side only)
-let analytics;
+let analytics = null;
 if (typeof window !== "undefined") {
-const analytics = getAnalytics(app);
+  try {
+    analytics = getAnalytics(app);
+  } catch (error) {
+    console.error('Analytics initialization error:', error);
+  }
 }
 
 // Initialize services
