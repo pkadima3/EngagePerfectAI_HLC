@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { auth, db, storage } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { User } from 'firebase/auth';
 import { 
@@ -92,8 +92,12 @@ export default function ProfilePage() {
       setProfile({
         ...userData,
         profilePicture: profilePicUrl,
-        dateJoined: userData.dateJoined.toDate(),
-        planExpiryDate: userData.planExpiryDate?.toDate(),
+        dateJoined: userData.dateJoined instanceof Timestamp 
+          ? userData.dateJoined.toDate() 
+          : new Date(userData.dateJoined),
+        planExpiryDate: userData.planExpiryDate instanceof Timestamp 
+          ? userData.planExpiryDate.toDate() 
+          : userData.planExpiryDate ? new Date(userData.planExpiryDate) : undefined,
       } as UserProfile);
     } catch (error) {
       console.error('Error fetching profile:', error);

@@ -21,6 +21,9 @@ export async function POST(request: Request) {
     const signature = headersList.get('stripe-signature')!;
 
     // Verify the webhook signature
+    if (!stripe) {
+      throw new Error('Stripe is not initialized');
+    }
     const event = stripe.webhooks.constructEvent(
       body,
       signature,

@@ -1,11 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import Toggle from '@/components/ui/Toggle';
 import PricingCard from '@/components/pricing/PricingCard';
 import { PLANS, PlanInterval } from '@/lib/stripe';
 
 export default function PricingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
   const [isYearly, setIsYearly] = useState(true);
 
   const litePlan = isYearly ? PLANS.LITE.YEARLY : PLANS.LITE.MONTHLY;

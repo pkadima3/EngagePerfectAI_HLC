@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { stripe, PLANS, PlanType, PlanInterval } from '@/lib/stripe';
+import { PLANS, PlanType, PlanInterval } from '@/lib/stripe';
+//import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+  apiVersion: '2025-01-27.acacia',
+});
 import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(request: Request) {
@@ -16,6 +21,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // Verify the token
+    const token = authorization.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+
     // Get the request body
     const body = await request.json();
     const { planType, interval, returnUrl } = body as {
@@ -25,8 +34,6 @@ export async function POST(request: Request) {
     };
 
     // Get the current user
-    const idToken = authorization.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(idToken);  // Use adminAuth instead of auth
     const userId = decodedToken.uid;
     const userEmail = decodedToken.email;
 
@@ -70,10 +77,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: 'Error creating checkout session' },
-      { status: 500 }
+      { error: 'Checkout failed' },
+      { status: 400 }
     );
   }
 }
