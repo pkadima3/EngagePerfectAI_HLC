@@ -12,17 +12,21 @@ export async function generateCaptions(params: {
   goal: string;
   mediaType?: string;
 }) {
-  const { platform, niche, tone, goal, mediaType } = params;
-
-  const prompt = `Create 3 engaging ${tone} captions for ${platform} in the ${niche} industry.
+  const prompt = `Create 3 engaging ${params.tone} captions for ${params.platform} in the ${params.niche} industry.
 
 Format each caption as a JSON object with these fields:
 - title: A brief description of the caption
-- caption: The main caption text
-- hashtags: Exactly 5 relevant hashtags for ${niche}
-- cta: A call-to-action related to ${goal}
+- caption: The main caption text (DO NOT include hashtags in the caption text)
+- hashtags: Exactly 5 relevant hashtags for ${params.niche} (without the # symbol)
+- cta: A call-to-action related to ${params.goal}
 
-${goal === 'share_knowledge' ? 'Start each caption with "Did you know?", "Insight:", or "Fact:"' : ''}
+
+${params.goal === 'share_knowledge' ? 'Start each caption with "Did you know?", "Insight:", or "Fact:"' : ''}
+
+Important:
+- Do not include hashtags in the caption text
+- Return hashtags without the # symbol
+- Keep the caption engaging and natural
 
 Return a JSON object with a "captions" array containing exactly 3 caption objects.`;
 

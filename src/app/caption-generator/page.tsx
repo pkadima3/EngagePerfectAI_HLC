@@ -11,6 +11,7 @@ import { CaptionFormData } from '@/types/caption';
 import { generateCaptions } from '@/lib/openai';
 import { GeneratedCaptions } from '@/components/CaptionWizard/GeneratedCaptions';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'react-toastify';
 
 export default function CaptionGenerator() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -78,6 +79,8 @@ export default function CaptionGenerator() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setGeneratedCaptions([]); // Clear previous captions while loading
+    
     try {
       const captions = await generateCaptions({
         platform: formData.platform,
@@ -86,9 +89,14 @@ export default function CaptionGenerator() {
         goal: formData.goal,
         mediaType: formData.mediaType
       });
+      
       setGeneratedCaptions(captions);
+      toast.success('Captions generated successfully!');
+      
     } catch (error) {
       console.error('Failed to generate captions:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to generate captions');
+      
     } finally {
       setIsGenerating(false);
     }
