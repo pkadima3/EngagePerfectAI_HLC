@@ -1,22 +1,74 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import React, { useState } from 'react';
 import Toggle from '@/components/ui/Toggle';
 import PricingCard from '@/components/pricing/PricingCard';
 import { PLANS, PlanInterval } from '@/lib/stripe';
 
+// Add PricingFAQ component definition
+const PricingFAQ = () => {
+  return (
+    <div className="max-w-3xl mx-auto mt-20 px-4">
+      <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">
+        Frequently Asked Questions
+      </h2>
+      
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            What's included in the free trial?
+          </h3>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            All plans come with a 5-day free trial that includes 5 free requests. You can test all features available in 
+            your chosen plan during this period.
+          </p>
+        </div>
+        
+        {/* ... other FAQ items ... */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            Can I change plans later?
+          </h3>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.
+          </p>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            How does the Flex Add-On work?
+          </h3>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            The Flex Add-On allows you to purchase additional requests when you need them. Each purchase gives you 10 extra requests that never expire.
+          </p>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            How is billing handled?
+          </h3>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            For monthly and yearly plans, you'll be billed automatically at the start of each billing cycle. You can cancel anytime before your next billing date.
+          </p>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            Do you offer refunds?
+          </h3>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            We offer a 14-day money-back guarantee if you're not satisfied with your subscription. Contact our support team to process your refund.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function PricingPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
+  // No need for user, loading, router, or redirect logic here anymore
+  // We moved that logic to the PricingCard component
+  
   const [isYearly, setIsYearly] = useState(true);
 
   const litePlan = isYearly ? PLANS.LITE.YEARLY : PLANS.LITE.MONTHLY;
@@ -27,18 +79,17 @@ export default function PricingPage() {
   const proInterval: PlanInterval = proPlan.interval as PlanInterval;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Simple, transparent pricing
+    <div className="min-h-screen pt-20 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Simple, Transparent Pricing
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Choose the plan that best fits your needs. All plans include a 5-day free trial.
+          <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+            Choose the plan that's right for you
           </p>
         </div>
-
+        
         {/* Toggle */}
         <div className="flex justify-center mb-12">
           <Toggle
@@ -108,6 +159,9 @@ export default function PricingPage() {
             ]}
           />
         </div>
+        
+        {/* Add PricingFAQ component here */}
+        <PricingFAQ />
       </div>
     </div>
   );

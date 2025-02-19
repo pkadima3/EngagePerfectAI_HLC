@@ -1,6 +1,8 @@
 import React from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PlanType, PlanInterval } from '@/lib/stripe';
+import { useAuth } from '@/hooks/useAuth'; // Add this import
+import { useRouter } from 'next/navigation'; // Add this import
 
 interface Feature {
   text: string;
@@ -34,15 +36,54 @@ const PricingCard = ({
   isPopular,
   footnote,
 }: PricingCardProps) => {
-  const { handleSubscription, loading } = useSubscription();
-
+  const { handleSubscription } = useSubscription();
+  const { user } = useAuth(); // Get user information
+  const router = useRouter(); // Get router for navigation
+  const [loading, setLoading] = React.useState(false);
+  
+  // New function to handle subscription with login check
+  /*const handleSubscriptionClick = () => {
+    if (!user) {
+      // If user is not logged in, redirect to login page
+      router.push('/login');
+    } else {
+      // If user is logged in, proceed with subscription
+      handleSubscription(planType, interval);
+    }
+  };*/
+// In your PricingCard.tsx file, update the handleSubscriptionClick function
+const handleSubscriptionClick = async () => {
+  if (!user) {
+    // Save the selected plan to localStorage or URL params so user can be directed back after login
+    localStorage.setItem('selectedPlan', planType);
+    localStorage.setItem('selectedInterval', interval || '');
+    
+    // Redirect to login with return URL
+    router.push(`/login?returnTo=${encodeURIComponent('/pricing')}`);
+  } else {
+    try {
+      // Show loading state
+      setLoading(true);
+      
+      // Call your existing subscription function
+      await handleSubscription(planType, interval);
+      
+      // You could add a success toast notification here
+    } catch (error) {
+      console.error('Subscription error:', error);
+      // You could add an error toast notification here
+    } finally {
+      setLoading(false);
+    }
+  }
+};
   return (
     <div className="relative flex flex-col p-6 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
       {isPopular && (
-        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-          <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-            Most Popular
-          </span>
+  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+        <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap">
+        Most Popular
+        </span>
         </div>
       )}
       
@@ -53,7 +94,7 @@ const PricingCard = ({
 
       <div className="mb-6">
         <div className="flex items-baseline">
-          <span className="text-3xl font-bold text-gray-900">€{price}</span>
+          <span className="text-3xl font-bold text-gray-900">£{price}</span>
           {interval && (
             <span className="ml-1 text-gray-500">/{interval}</span>
           )}
@@ -90,7 +131,7 @@ const PricingCard = ({
 
       <div className="mt-auto">
         <button
-          onClick={() => handleSubscription(planType, interval)}
+          onClick={handleSubscriptionClick} // Changed to our new function
           disabled={loading}
           className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-colors duration-200 
             ${isPopular 
