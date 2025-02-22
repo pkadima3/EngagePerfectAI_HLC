@@ -14,16 +14,20 @@ interface WizardLayoutProps {
   onNext?: () => void;
   onPrev?: () => void;
   isNextDisabled?: boolean;
+  isGenerating?: boolean;
+  hideNextButton?: boolean;
 }
 
-export function WizardLayout({
+export const WizardLayout: React.FC<WizardLayoutProps> = ({
   children,
   currentStep,
   steps,
   onNext,
   onPrev,
-  isNextDisabled = false
-}: WizardLayoutProps) {
+  isNextDisabled = false,
+  isGenerating = false,
+  hideNextButton = false
+}: WizardLayoutProps) => {
   return (
     <div className="flex flex-col">
       {/* Progress Steps */}
@@ -111,12 +115,12 @@ export function WizardLayout({
       <div className="px-6 sm:px-8 py-5 border-t border-gray-200 dark:border-gray-700 flex justify-between">
         <button
           onClick={onPrev}
-          disabled={currentStep === 0}
+          disabled={currentStep === 0 || isGenerating}
           className={`
             px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
             flex items-center gap-2
             ${
-              currentStep === 0
+              currentStep === 0 || isGenerating
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
@@ -125,27 +129,38 @@ export function WizardLayout({
           Previous
         </button>
         
-        <button
-          onClick={onNext}
-          disabled={isNextDisabled}
-          className={`
-            px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-            flex items-center gap-2
-            ${
-              isNextDisabled
-                ? 'bg-blue-400 text-white cursor-not-allowed dark:bg-blue-600 dark:opacity-60'
-                : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-sm hover:shadow-md'
-            }`}
-        >
-          {currentStep === steps.length - 1 ? (
-            'Download'
-          ) : (
-            <>
-              {currentStep === steps.length - 2 ? 'Generate' : 'Next'}
-              <ArrowRightIcon className="w-4 h-4" />
-            </>
-          )}
-        </button>
+        {!hideNextButton && (
+          <button
+            onClick={onNext}
+            disabled={isNextDisabled || isGenerating}
+            className={`
+              relative px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+              flex items-center gap-2 overflow-hidden
+              ${
+                isNextDisabled || isGenerating
+                  ? 'bg-blue-400 dark:bg-blue-600 dark:opacity-60'
+                  : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-sm hover:shadow-md'
+              }`}
+          >
+            {isGenerating ? (
+              <>
+                <div className="h-4 w-4 border-t-2 border-r-2 border-white rounded-full animate-spin mr-2"></div>
+                <span className="text-white">Generating...</span>
+              </>
+            ) : (
+              <>
+                <span className="text-white">
+                  {currentStep === steps.length - 1 
+                    ? 'Download' 
+                    : currentStep === steps.length - 2 
+                    ? 'Generate' 
+                    : 'Next'}
+                </span>
+                {currentStep !== steps.length - 1 && <ArrowRightIcon className="w-4 h-4 text-white" />}
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

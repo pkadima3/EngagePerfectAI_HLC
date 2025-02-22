@@ -3,9 +3,9 @@
 import html2canvas from 'html2canvas';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-export type MediaType = 'image' | 'video';
+export type MediaType = 'image' | 'video' | 'text-only';
 
-interface Caption {
+export interface Caption {
   title: string;
   caption: string;
   hashtags: string[];
@@ -22,12 +22,12 @@ const createCaptionedVideo = async (videoElement: HTMLVideoElement, caption: Cap
 
       // Set canvas dimensions
       canvas.width = videoElement.videoWidth;
-      const captionHeight = 200; // Height for caption area
+      const captionHeight = 220; // Height for caption area
       canvas.height = videoElement.videoHeight + captionHeight;
 
       // Configure caption style
       ctx.fillStyle = '#1e1e1e'; // Dark background for caption
-      ctx.font = '18px Arial';
+      ctx.font = '20px Arial';
       ctx.textBaseline = 'top';
       ctx.fillStyle = 'white';
 
@@ -35,7 +35,7 @@ const createCaptionedVideo = async (videoElement: HTMLVideoElement, caption: Cap
       const stream = canvas.captureStream();
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 5000000 // 5 Mbps for good quality
+        videoBitsPerSecond: 3000000 // 3 Mbps for good quality
       });
 
       const chunks: Blob[] = [];
@@ -63,7 +63,7 @@ const createCaptionedVideo = async (videoElement: HTMLVideoElement, caption: Cap
 
         // Draw caption text
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 20px Arial';
         let y = videoElement.videoHeight + 20;
 
         // Title
@@ -71,7 +71,7 @@ const createCaptionedVideo = async (videoElement: HTMLVideoElement, caption: Cap
         y += 30;
 
         // Main caption text
-        ctx.font = '16px Arial';
+        ctx.font = '20px Arial';
         const words = caption.caption.split(' ');
         let line = '';
         for (const word of words) {
@@ -132,28 +132,134 @@ const uploadToFirebase = async (blob: Blob, caption: Caption, mediaType: MediaTy
   return await getDownloadURL(storageRef);
 };
 
+/* =============================Helper function to create share data=============================
+const createShareData = (caption: Caption, mediaUrl?: string) => {
+  const data: ShareData = {
+    title: caption.title,
+    text: `${caption.caption}\n\n${caption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${caption.cta}`
+  };
+  
+  if (mediaUrl) {
+    data.url = mediaUrl;
+  }
+  
+  return data;
+};
+
+export const sharePreview = async (
+  previewRef: React.RefObject<HTMLDivElement>,
+  caption: Caption,
+  mediaType: MediaType
+): Promise<{ status: 'shared' | 'fallback' | 'cancelled', message?: string }> => {
+  if (!previewRef.current) throw new Error('Preview element not found');
+
+  /*try {
+    // Check if Web Share API is available
+    if (!navigator.share) {
+      return { status: 'fallback', message: 'Sharing not supported on this device' };
+    }
+
+    // Try text-only sharing first
+    const basicShareData = createShareData(caption);
+    
+    // For text-only content, try basic sharing
+    if (mediaType === 'text-only') {
+      if (navigator.canShare(basicShareData)) {
+        await navigator.share(basicShareData);
+        return { status: 'shared', message: 'Content shared successfully' };
+      }
+      return { status: 'fallback', message: 'Cannot share this content' };
+    }
+
+    // Handle media sharing
+    const previewContent = previewRef.current.querySelector('#preview-content');
+    if (!previewContent) throw new Error('Preview content not found');
+
+    let mediaBlob: Blob;
+    if (mediaType === 'video') {
+      const video = previewContent.querySelector('video');
+      if (!video) throw new Error('Video element not found');
+      mediaBlob = await createCaptionedVideo(video, caption);
+    } else {
+      const canvas = await html2canvas(previewContent as HTMLElement, {
+        useCORS: true,
+        scale: 2,
+        logging: false,
+      });
+      mediaBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => b ? resolve(b) : reject(new Error('Failed to create blob')),
+          'image/png',
+          1.0
+        );
+      });
+    }
+
+    // Create a file object for sharing
+    const file = new File(
+      [mediaBlob],
+      `${caption.title.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.${mediaType === 'video' ? 'webm' : 'png'}`,
+      { type: mediaType === 'video' ? 'video/webm' : 'image/png' }
+    );
+
+    // Try native file sharing
+    const shareDataWithFile = {
+      ...basicShareData,
+      files: [file]
+    };
+
+    if (navigator.canShare(shareDataWithFile)) {
+      await navigator.share(shareDataWithFile);
+      return { status: 'shared', message: 'Content shared with media' };
+    }
+
+    // If file sharing fails, upload to Firebase and share URL
+    const mediaUrl = await uploadToFirebase(mediaBlob, caption, mediaType);
+    const shareDataWithUrl = createShareData(caption, mediaUrl);
+
+    await navigator.share(shareDataWithUrl);
+    return { status: 'shared', message: 'Content shared via link' };
+
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        return { status: 'cancelled', message: 'Sharing cancelled' };
+      }
+      throw new Error(`Sharing failed: ${error.message}`);
+    }
+    throw error;
+  }
+};*/
+//==================================================================================================
+
 // Share preview function
 export const sharePreview = async (
   previewRef: React.RefObject<HTMLDivElement>,
   caption: Caption,
-  mediaType: MediaType,
-  event: React.MouseEvent<HTMLButtonElement>
-) => {
-  event.preventDefault(); // Prevent default at the start
-  
+  mediaType: MediaType
+): Promise<{ status: 'shared' | 'fallback' | 'cancelled'; message?: string }> => {
   if (!previewRef.current) throw new Error('Preview element not found');
 
   try {
     const previewContent = previewRef.current.querySelector('#preview-content');
     if (!previewContent) throw new Error('Preview content not found');
 
-    let file: File;
+    // Create basic share data
+    const shareData: ShareData = {
+      title: caption.title,
+      text: `${caption.caption}\n\n${caption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${caption.cta}`
+    };
+
+    // Handle different media types
+    let mediaFile: File | undefined;
     if (mediaType === 'video') {
       const video = previewContent.querySelector('video');
       if (!video) throw new Error('Video element not found');
-      const blob = await createCaptionedVideo(video, caption);
-      file = new File([blob], `video-${Date.now()}.webm`, { type: 'video/webm' });
-    } else {
+      
+      // Use createCaptionedVideo to get the video with captions
+      const captionedVideoBlob = await createCaptionedVideo(video, caption);
+      mediaFile = new File([captionedVideoBlob], `video-${Date.now()}.webm`, { type: 'video/webm' });
+    } else if (mediaType === 'image') {
       const canvas = await html2canvas(previewContent as HTMLElement, {
         useCORS: true,
         scale: 2,
@@ -162,31 +268,46 @@ export const sharePreview = async (
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Failed to create blob')), 'image/png', 1.0);
       });
-      file = new File([blob], `image-${Date.now()}.png`, { type: 'image/png' });
+      mediaFile = new File([blob], `image-${Date.now()}.png`, { type: 'image/png' });
     }
 
-    const shareData = {
-      title: caption.title,
-      text: `${caption.caption}\n\n${caption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${caption.cta}`,
-      files: [file]
-    };
+    // Try sharing with media if available
+    if (mediaFile) {
+      const shareDataWithFile = { ...shareData, files: [mediaFile] };
+      if (navigator.canShare && navigator.canShare(shareDataWithFile)) {
+        await navigator.share(shareDataWithFile);
+        return { status: 'shared', message: 'Content shared with media' };
+      }
 
-    // Check if sharing is supported
-    if (!navigator.canShare || !navigator.canShare(shareData)) {
-      return { status: 'fallback' };
+      // If file sharing fails, upload to Firebase and share URL
+      const mediaUrl = await uploadToFirebase(mediaFile, caption, mediaType);
+      const shareDataWithUrl = { ...shareData, url: mediaUrl };
+
+      if (navigator.share) {
+        await navigator.share(shareDataWithUrl);
+        return { status: 'shared', message: 'Content shared via link' };
+      }
     }
 
-    // Share within the click event context
-    await navigator.share(shareData);
-    return { status: 'shared' };
+    // Fallback to basic text sharing
+    if (navigator.share) {
+      await navigator.share(shareData);
+      return { status: 'shared', message: 'Content shared (text only)' };
+    }
+
+    return { status: 'fallback', message: 'Sharing not supported' };
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { status: 'cancelled' };
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        return { status: 'cancelled', message: 'Share cancelled' };
+      }
+      throw error;
     }
     throw error;
   }
 };
 
+// =============================Helper function to download preview=============================
 // Download preview function
 export const downloadPreview = async (
   previewRef: React.RefObject<HTMLDivElement>,
@@ -241,3 +362,4 @@ export const downloadPreview = async (
     throw error;
   }
 };
+

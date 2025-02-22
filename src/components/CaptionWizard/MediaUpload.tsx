@@ -5,14 +5,15 @@ import {
   ArrowUpTrayIcon, 
   CameraIcon, 
   ArrowPathIcon,
-  XMarkIcon 
+  XMarkIcon,
+  ArrowRightIcon // Add this import
 } from '@heroicons/react/24/outline';
 import { 
   ArrowsPointingOutIcon,
   ArrowUturnLeftIcon,
   PaintBrushIcon
 } from '@heroicons/react/24/solid';
-import { uploadMedia, dataURLtoFile } from '@/lib/storage-utils';
+import { dataURLtoFile } from '@/lib/storage-utils'; // Remove uploadMedia import
 import { useAuth } from '@/contexts/AuthContext';
 
 interface MediaUploadProps {
@@ -28,8 +29,6 @@ export function MediaUpload({ formData, setFormData, onNext }: MediaUploadProps)
   const [rotationAngle, setRotationAngle] = useState(0);
   const [activeFilter, setActiveFilter] = useState('none');
   const [isCropping, setIsCropping] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
   const [rawFile, setRawFile] = useState<File | null>(null);
   
   // Get user from auth context
@@ -232,98 +231,12 @@ export function MediaUpload({ formData, setFormData, onNext }: MediaUploadProps)
   };
 
   // Handle upload to Firebase and move to next step
-  const handleUploadToFirebase = async () => {
-    if (!user) {
-      alert('You must be logged in to upload media.');
-      return;
-    }
-    
+  const handleContinue = () => {
     if (!rawFile && formData.mediaType !== 'text-only') {
       alert('Please select or capture media first.');
       return;
     }
-    
-    if (formData.mediaType === 'text-only') {
-      onNext();
-      return;
-    }
-    
-    try {
-      setIsUploading(true);
-      let fileToUpload = rawFile;
-      
-      // If we've applied filters or rotation, we need to capture the modified image
-      if (formData.mediaType === 'image' && (rotationAngle !== 0 || activeFilter !== 'none')) {
-        // Create a temporary image element
-        const img = new Image();
-        img.src = formData.mediaUrl;
-        
-        // Wait for the image to load
-        await new Promise(resolve => {
-          img.onload = resolve;
-        });
-        
-        // Create a canvas to draw the modified image
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        if (ctx) {
-          // Set canvas dimensions
-          canvas.width = img.width;
-          canvas.height = img.height;
-          
-          // Apply rotation if needed
-          if (rotationAngle !== 0) {
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate((rotationAngle * Math.PI) / 180);
-            ctx.drawImage(img, -img.width / 2, -img.height / 2);
-          } else {
-            ctx.drawImage(img, 0, 0);
-          }
-          
-          // Apply filter if needed
-          if (activeFilter !== 'none') {
-            ctx.filter = 
-              activeFilter === 'grayscale' ? 'grayscale(100%)' :
-              activeFilter === 'sepia' ? 'sepia(70%)' :
-              activeFilter === 'saturate' ? 'saturate(200%)' : 'none';
-            
-            // Need to redraw with filter applied
-            ctx.drawImage(canvas, 0, 0);
-          }
-          
-          // Convert canvas to file
-          const dataUrl = canvas.toDataURL('image/jpeg');
-          fileToUpload = dataURLtoFile(dataUrl, 'edited-image.jpg');
-        }
-      }
-      
-      if (fileToUpload) {
-        // Upload to Firebase with progress tracking
-        const downloadURL = await uploadMedia(
-          fileToUpload,
-          user.uid,
-          (progress) => {
-            setUploadProgress(progress);
-          }
-        );
-        
-        // Update form data with the Firebase URL
-        setFormData({
-          ...formData,
-          mediaUrl: downloadURL
-        });
-        
-        // Move to next step
-        onNext();
-      }
-    } catch (error) {
-      console.error('Error uploading to Firebase:', error);
-      alert('Failed to upload media. Please try again.');
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-    }
+    onNext();
   };
 
   return (
@@ -483,28 +396,13 @@ export function MediaUpload({ formData, setFormData, onNext }: MediaUploadProps)
         
         {formData.mediaUrl && formData.mediaType !== 'text-only' && (
           <div className="mt-4 w-full">
-            {isUploading ? (
-              <div className="w-full space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Uploading...</span>
-                  <span>{Math.round(uploadProgress)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={handleUploadToFirebase}
-                className="w-full py-3 bg-blue-600 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
-              >
-                <ArrowUpTrayIcon className="h-5 w-5" />
-                Upload
-              </button>
-            )}
+            <button
+              onClick={handleContinue}
+              className="w-full py-3 bg-blue-600 text-white rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+            >
+              Continue
+              <ArrowRightIcon className="h-5 w-5" />
+            </button>
           </div>
         )}
       </div>

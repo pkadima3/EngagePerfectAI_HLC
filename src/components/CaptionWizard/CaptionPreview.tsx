@@ -12,7 +12,7 @@ interface CaptionPreviewProps {
   mediaUrl?: string;
   mediaType?: string;
   selectedCaption: Caption | null;
-  onShare: (e: React.MouseEvent<HTMLButtonElement>) => Promise<void>;
+  onShare: () => Promise<void>;
   onDownload?: () => void;
 }
 
@@ -33,21 +33,17 @@ export const CaptionPreview = ({
     setImageError(false);
   }, [mediaUrl]);
 
-  const handleShare = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const handleShare = () => {
     if (isSharing || !selectedCaption) return;
     setIsSharing(true);
-
-    try {
-      // Use the onShare prop instead of handling sharing internally
-      await onShare(event);
-    } catch (error) {
-      console.error('Share failed:', error);
-    } finally {
-      setIsSharing(false);
-    }
+    
+    onShare()
+      .catch(error => {
+        console.error('Share failed:', error);
+      })
+      .finally(() => {
+        setIsSharing(false);
+      });
   };
 
   const handleDownload = async () => {
@@ -79,7 +75,7 @@ export const CaptionPreview = ({
         </h3>
         <div className="flex space-x-2">
           <button
-            onClick={(e) => handleShare(e)}  // Pass the event directly
+            onClick={handleShare}
             disabled={isSharing || !selectedCaption}
             className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
             title="Share"

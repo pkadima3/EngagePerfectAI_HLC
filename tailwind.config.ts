@@ -12,6 +12,10 @@ export default {
         background: "var(--background)",
         foreground: "var(--foreground)",
       },
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+        'bounce': 'bounce 1s infinite',
+      },
     },
   },
   darkMode: 'class', // Add this line for dark mode support

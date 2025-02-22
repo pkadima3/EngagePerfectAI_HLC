@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { CheckCircle } from 'lucide-react';
 
 interface Caption {
   title: string;
   caption: string;
-  cta: string;
+ 
   hashtags: string[];
+  cta: string;
 }
 
 interface GeneratedCaptionsProps {
@@ -17,6 +18,14 @@ interface GeneratedCaptionsProps {
 
 export const GeneratedCaptions = ({ captions, isLoading, onSelect }: GeneratedCaptionsProps) => {
   const [selectedCaption, setSelectedCaption] = useState<number | null>(null);
+
+  // Select the first caption by default when captions are loaded
+  useEffect(() => {
+    if (captions.length > 0 && selectedCaption === null) {
+      setSelectedCaption(0);
+      onSelect?.(captions[0]);
+    }
+  }, [captions, selectedCaption, onSelect]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -82,6 +91,11 @@ export const GeneratedCaptions = ({ captions, isLoading, onSelect }: GeneratedCa
               {caption.caption}
             </p>
             
+           
+            
+            <p className="text-gray-600 dark:text-gray-400 italic">
+              {caption.cta}
+            </p>
             <div className="flex flex-wrap gap-2">
               {caption.hashtags.map((tag, i) => (
                 <span 
@@ -92,10 +106,6 @@ export const GeneratedCaptions = ({ captions, isLoading, onSelect }: GeneratedCa
                 </span>
               ))}
             </div>
-            
-            <p className="text-gray-600 dark:text-gray-400 italic">
-              {caption.cta}
-            </p>
 
             {/* Actions */}
             <div className="flex justify-end pt-2 opacity-0 group-hover:opacity-100 transition-opacity">

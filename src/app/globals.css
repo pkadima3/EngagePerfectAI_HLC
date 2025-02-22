@@ -3,6 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
+
 /* 2) Optional universal reset */
 * {
   margin: 0;
@@ -28,7 +29,13 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/*  font-family: Arial, Helvetica, sans-serif;*/
+font-family: 'Inter', system-ui, sans-serif;
+
 
 }
 
+.preview-container {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
