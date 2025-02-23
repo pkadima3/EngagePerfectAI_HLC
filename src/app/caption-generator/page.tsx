@@ -16,12 +16,14 @@ import { toast } from 'react-toastify';
 import { sharePreview, downloadPreview } from '@/lib/sharing-utils';
 
 import { MediaType } from '@/lib/sharing-utils';
+import html2canvas from 'html2canvas';
 
 interface Caption {
   title: string;
   caption: string;
-  hashtags: string[];
+
   cta: string;
+  hashtags: string[];
 }
 
 export default function CaptionGenerator() {
@@ -132,69 +134,63 @@ export default function CaptionGenerator() {
   };
 
 const handleShare = async () => {
-  if (!selectedCaption || !formData.mediaType) {
-    toast.warning(
-      !selectedCaption ? 'Please select a caption first' : 'Media type not specified'
-    );
+  if (!selectedCaption) {
+    toast.warning('Please select a caption first');
     return;
   }
 
   setIsSharing(true);
   try {
-    // Get the preview content
-    const previewContent = previewRef.current?.querySelector('#preview-content');
-    if (!previewContent) throw new Error('Preview content not found');
-
-    // Create file from media content
-    let mediaFile: File | undefined;
-    if (formData.mediaType === 'video') {
-      const video = previewContent.querySelector('video');
-      if (!video) throw new Error('Video element not found');
-      const response = await fetch(video.src);
-      const blob = await response.blob();
-      mediaFile = new File([blob], `video-${Date.now()}.mp4`, { type: 'video/mp4' });
-    } else if (formData.mediaType === 'image') {
-      const canvas = await html2canvas(previewContent as HTMLElement, {
-        useCORS: true,
-        scale: 2,
-        logging: false,
-      });
-      const blob = await new Promise<Blob>((resolve) => 
-        canvas.toBlob((b) => resolve(b as Blob), 'image/png', 1.0)
-      );
-      mediaFile = new File([blob], `image-${Date.now()}.png`, { type: 'image/png' });
-    }
-
-    // Prepare share data with both text and media
-    const shareData: ShareData = {
+    // Create basic share data with title included in text
+    const shareData = {
       title: selectedCaption.title,
-      text: `${selectedCaption.caption}\n\n${selectedCaption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${selectedCaption.cta}`,
-      files: mediaFile ? [mediaFile] : undefined
+      text: `${selectedCaption.title}\n\n${selectedCaption.caption}\n\n${selectedCaption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${selectedCaption.cta}`
     };
 
-    // Check if sharing with files is supported
-    if (navigator.canShare && navigator.canShare(shareData)) {
-      await navigator.share(shareData);
-      toast.success('Content shared successfully!');
-    } else {
-      // If file sharing is not supported, try sharing without the file
-      const textOnlyData = {
-        title: shareData.title,
-        text: shareData.text
-      };
-      
-      if (navigator.share && navigator.canShare(textOnlyData)) {
-        await navigator.share(textOnlyData);
-        toast.success('Caption shared successfully! (Media sharing not supported)');
-      } else {
-        toast.info('Sharing not supported - downloading instead');
-        await handleDownload();
+    // Only handle media if it's not text-only
+    if (formData.mediaType && formData.mediaType !== 'text-only') {
+      const previewContent = previewRef.current?.querySelector('#preview-content');
+      if (!previewContent) throw new Error('Preview content not found');
+
+      let mediaFile: File | undefined;
+      if (formData.mediaType === 'video') {
+        const video = previewContent.querySelector('video');
+        if (!video) throw new Error('Video element not found');
+        const response = await fetch(video.src);
+        const blob = await response.blob();
+        mediaFile = new File([blob], `video-${Date.now()}.mp4`, { type: 'video/mp4' });
+      } else if (formData.mediaType === 'image') {
+        const canvas = await html2canvas(previewContent as HTMLElement, {
+          useCORS: true,
+          scale: 2,
+          logging: false,
+        });
+        const blob = await new Promise<Blob>((resolve) => 
+          canvas.toBlob((b) => resolve(b as Blob), 'image/png', 1.0)
+        );
+        mediaFile = new File([blob], `image-${Date.now()}.png`, { type: 'image/png' });
       }
+
+      // Try sharing with media if available
+      if (mediaFile && navigator.canShare && navigator.canShare({ ...shareData, files: [mediaFile] })) {
+        await navigator.share({ ...shareData, files: [mediaFile] });
+        toast.success('Content shared successfully!');
+        return;
+      }
+    }
+
+    // If media sharing fails or it's text-only, try sharing just the text
+    if (navigator.share && navigator.canShare(shareData)) {
+      await navigator.share(shareData);
+      toast.success('Caption shared successfully!');
+    } else {
+      // If sharing is not supported, copy to clipboard
+      await navigator.clipboard.writeText(shareData.text);
+      toast.success('Caption copied to clipboard!');
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      // User cancelled sharing - no need for error message
-      return;
+      return; // User cancelled sharing - no error message needed
     }
     console.error('Error sharing:', error);
     toast.error('Failed to share content');
@@ -210,16 +206,28 @@ const handleDownload = async () => {
   }
 
   try {
-    if (!formData.mediaType) {
-      throw new Error('Media type not specified');
+    // For text-only captions or when no media type is specified
+    if (!formData.mediaType || formData.mediaType === 'text-only') {
+      const content = `${selectedCaption.title}\n\n${selectedCaption.caption}\n\n${selectedCaption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${selectedCaption.cta}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${selectedCaption.title.replace(/\s+/g, '-').toLowerCase()}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Caption downloaded successfully!');
+      return;
     }
 
+    // For media content, use the existing download logic
     await downloadPreview(
       previewRef,
       selectedCaption,
       formData.mediaType as MediaType
     );
-    
     toast.success('Downloaded successfully!');
   } catch (error) {
     console.error('Error downloading:', error);
@@ -374,5 +382,3 @@ const handleDownload = async () => {
     </div>
   );
 }
-
-import html2canvas from 'html2canvas';

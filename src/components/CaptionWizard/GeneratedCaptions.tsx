@@ -6,8 +6,9 @@ interface Caption {
   title: string;
   caption: string;
  
-  hashtags: string[];
+
   cta: string;
+  hashtags: string[];
 }
 
 interface GeneratedCaptionsProps {
@@ -83,17 +84,17 @@ export const GeneratedCaptions = ({ captions, isLoading, onSelect }: GeneratedCa
           )}
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
               {caption.title}
             </h3>
             
-            <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+            <p className="whitespace-pre-wrap text-gray-700 dark:text-white">
               {caption.caption}
             </p>
             
            
             
-            <p className="text-gray-600 dark:text-gray-400 italic">
+            <p className="text-gray-600 text-l font-semibold dark:text-white italic">
               {caption.cta}
             </p>
             <div className="flex flex-wrap gap-2">

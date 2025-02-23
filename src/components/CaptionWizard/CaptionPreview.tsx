@@ -4,8 +4,9 @@ import { ShareIcon, ArrowDownTrayIcon as DownloadIcon } from '@heroicons/react/2
 interface Caption {
   title: string;
   caption: string;
-  hashtags: string[];
+
   cta: string;
+  hashtags: string[];
 }
 
 interface CaptionPreviewProps {
@@ -99,36 +100,38 @@ export const CaptionPreview = ({
 
       {/* Preview Content */}
       <div id="preview-content" className="preview-container">
-        {/* Media Section */}
-        <div className="w-full bg-gray-100 dark:bg-gray-900">
-          {mediaType === 'image' && mediaUrl ? (
-            <div className="relative">
-              <img
+        {/* Media Section - Only show if not text-only */}
+        {mediaType && mediaType !== 'text-only' && (
+          <div className="w-full bg-gray-100 dark:bg-gray-900">
+            {mediaType === 'image' && mediaUrl ? (
+              <div className="relative">
+                <img
+                  src={mediaUrl}
+                  alt="Preview"
+                  className={`w-full h-full object-contain transition-opacity duration-300 ${
+                    imageLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => setImageError(true)}
+                  crossOrigin="anonymous"
+                />
+              </div>
+            ) : mediaType === 'video' && mediaUrl ? (
+              <video
                 src={mediaUrl}
-                alt="Preview"
-                className={`w-full h-full object-contain transition-opacity duration-300 ${
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                onLoad={() => setImageLoaded(true)}
-                onError={() => setImageError(true)}
+                className="w-full h-full object-contain"
+                controls
                 crossOrigin="anonymous"
               />
-            </div>
-          ) : mediaType === 'video' && mediaUrl ? (
-            <video
-              src={mediaUrl}
-              className="w-full h-full object-contain"
-              controls
-              crossOrigin="anonymous"
-            />
-          ) : (
-            <div className="w-full h-64 flex items-center justify-center">
-              <span className="text-gray-500 dark:text-gray-400">
-                {imageError ? 'Error loading media' : 'No media'}
-              </span>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="w-full h-64 flex items-center justify-center">
+                <span className="text-gray-500 dark:text-gray-400">
+                  {imageError ? 'Error loading media' : 'No media'}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Caption Content */}
         <div className="p-6 bg-white dark:bg-gray-800">
@@ -141,7 +144,12 @@ export const CaptionPreview = ({
               {selectedCaption.caption}
             </p>
             
-            <div className="flex flex-wrap gap-2">
+          
+            
+            <p className="text-gray-600 text-xl font-semibold dark:text-white italic">
+              {selectedCaption.cta}
+
+              <div className="flex flex-wrap gap-2">
               {selectedCaption.hashtags.map((tag, index) => (
                 <span
                   key={index}
@@ -151,9 +159,6 @@ export const CaptionPreview = ({
                 </span>
               ))}
             </div>
-            
-            <p className="text-gray-600 dark:text-gray-400 italic">
-              {selectedCaption.cta}
             </p>
           </div>
         </div>
