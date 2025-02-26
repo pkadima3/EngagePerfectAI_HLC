@@ -32,6 +32,6 @@ export interface GenerateCaptionsParams {
 export interface GeneratedCaption {
   title: string;
   caption: string;
-  hashtags: string[];
   cta: string;
+  hashtags: string[];
 }

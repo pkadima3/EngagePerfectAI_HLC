@@ -17,6 +17,12 @@ import { sharePreview, downloadPreview } from '@/lib/sharing-utils';
 
 import { MediaType } from '@/lib/sharing-utils';
 import html2canvas from 'html2canvas';
+//import { trackSocialShare } from '@/lib/social-sharing';
+import { doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+import { shareToSocialMedia, trackSocialShare } from '@/lib/social-sharing-utils';
+
 
 interface Caption {
   title: string;
@@ -44,6 +50,7 @@ export default function CaptionGenerator() {
   const [generatedCaptions, setGeneratedCaptions] = useState<Caption[]>([]);
   const [selectedCaption, setSelectedCaption] = useState<Caption | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [currentPostId, setCurrentPostId] = useState<string | undefined>(undefined);
 
   const steps = [
     {
@@ -141,59 +148,161 @@ const handleShare = async () => {
 
   setIsSharing(true);
   try {
-    // Create basic share data with title included in text
-    const shareData = {
-      title: selectedCaption.title,
-      text: `${selectedCaption.title}\n\n${selectedCaption.caption}\n\n${selectedCaption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${selectedCaption.cta}`
-    };
-
-    // Only handle media if it's not text-only
-    if (formData.mediaType && formData.mediaType !== 'text-only') {
-      const previewContent = previewRef.current?.querySelector('#preview-content');
-      if (!previewContent) throw new Error('Preview content not found');
-
-      let mediaFile: File | undefined;
-      if (formData.mediaType === 'video') {
-        const video = previewContent.querySelector('video');
-        if (!video) throw new Error('Video element not found');
-        const response = await fetch(video.src);
-        const blob = await response.blob();
-        mediaFile = new File([blob], `video-${Date.now()}.mp4`, { type: 'video/mp4' });
-      } else if (formData.mediaType === 'image') {
-        const canvas = await html2canvas(previewContent as HTMLElement, {
-          useCORS: true,
-          scale: 2,
-          logging: false,
-        });
-        const blob = await new Promise<Blob>((resolve) => 
-          canvas.toBlob((b) => resolve(b as Blob), 'image/png', 1.0)
-        );
-        mediaFile = new File([blob], `image-${Date.now()}.png`, { type: 'image/png' });
-      }
-
-      // Try sharing with media if available
-      if (mediaFile && navigator.canShare && navigator.canShare({ ...shareData, files: [mediaFile] })) {
-        await navigator.share({ ...shareData, files: [mediaFile] });
-        toast.success('Content shared successfully!');
-        return;
+    // Create formatted caption text with all parts combined
+    const captionText = `${selectedCaption.title}\n\n${selectedCaption.caption}\n\n${selectedCaption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${selectedCaption.cta}`;
+    
+    // Determine if user is on free tier
+    // Determine if user is on free tier (based on user object)
+    let isFreeTier = true; // Default to free tier for now
+    
+    // If we have user data, check if they're on a paid plan
+    // Note: You'll need to add proper user subscription info in your AuthContext
+    if (user && typeof user === 'object') {
+      // Access custom user properties safely with optional chaining
+      const userCustomData = (user as any).customData;
+      if (userCustomData && userCustomData.subscription === 'premium') {
+      isFreeTier = false;
       }
     }
 
-    // If media sharing fails or it's text-only, try sharing just the text
-    if (navigator.share && navigator.canShare(shareData)) {
+    // Add branding for free tier users
+    const shareText = isFreeTier 
+      ? `${captionText}\n\nCreated with EngagePerfect • https://engageperfect.com`
+      : captionText;
+    
+    // Get the sharable content element
+    const sharableContent = document.getElementById('sharable-content');
+    if (!sharableContent) {
+      toast.error('Content not found for sharing');
+      return;
+    }
+    
+    // Create basic share data
+    const shareData: ShareData = {
+      title: selectedCaption.title,
+      text: shareText,
+    };
+
+    // Try to get media if available
+    if (formData.mediaType && formData.mediaType !== 'text-only' && formData.mediaUrl) {
+      // Try to get the media file for sharing
+      let mediaFile: File | undefined;
+      
+      try {
+        if (formData.mediaType === 'video') {
+          // For video content
+          const video = sharableContent.querySelector('video');
+          if (!video) throw new Error('Video element not found');
+          
+          // Create captioned video
+          const shareToastId = toast.loading('Preparing video...');
+          
+          try {
+            // For now, just use the original video without captions
+            const response = await fetch(video.src);
+            if (!response.ok) throw new Error('Failed to fetch video');
+            const videoBlob = await response.blob();
+            mediaFile = new File([videoBlob], `video-${Date.now()}.mp4`, { type: 'video/mp4' });
+          } catch (captionError) {
+            console.warn('Error creating captioned video, using original:', captionError);
+            
+            // Option 2: Fallback to original video if captioning fails
+            const response = await fetch(video.src);
+            if (!response.ok) throw new Error('Failed to fetch video');
+            
+            const blob = await response.blob();
+            mediaFile = new File([blob], `video-${Date.now()}.${blob.type?.split('/')[1] || 'mp4'}`, { 
+              type: blob.type || 'video/mp4' 
+            });
+          }
+          
+          toast.dismiss(shareToastId);
+        } else if (formData.mediaType === 'image') {
+          // For image content
+          // Show loading indicator during rendering
+          const shareToastId = toast.loading('Preparing image...');
+          
+          const canvas = await html2canvas(sharableContent, {
+            useCORS: true,
+            scale: 2, // Better quality
+            logging: false,
+            allowTaint: false,
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--background') || '#ffffff',
+            ignoreElements: (element) => {
+              // Ignore any UI controls that shouldn't be in the shared image
+              return element.classList.contains('social-share-buttons') || 
+                     element.classList.contains('preview-controls');
+            }
+          });
+          
+          // Dismiss loading toast
+          toast.dismiss(shareToastId);
+          
+          const blob = await new Promise<Blob>((resolve, reject) => 
+            canvas.toBlob(
+              (b) => b ? resolve(b) : reject(new Error('Failed to create image')), 
+              'image/png', 
+              0.95
+            )
+          );
+          
+          mediaFile = new File([blob], `image-${Date.now()}.png`, { type: 'image/png' });
+        }
+
+        // Try sharing with media if available
+        if (mediaFile && navigator.canShare && navigator.canShare({ files: [mediaFile] })) {
+          // Create proper share data with file
+          const fileShareData = {
+            title: shareData.title,
+            text: shareData.text,
+            files: [mediaFile]
+          };
+          
+          await navigator.share(fileShareData);
+          toast.success('Content shared successfully!');
+          
+          // Track the share in analytics
+          if (user?.uid) {
+            await trackSocialShare(user.uid, 'native', {
+              postId: currentPostId,
+              includeTimestamp: true
+            });
+          }
+          return;
+        }
+      } catch (error) {
+        if ((error as Error)?.name !== 'AbortError') {
+          console.error('Error preparing media for share:', error);
+        }
+        // Continue to text-only sharing if media sharing fails
+      }
+    }
+
+    // If we reach here, we couldn't share with media - try text-only sharing
+    if (navigator.share) {
       await navigator.share(shareData);
       toast.success('Caption shared successfully!');
+      
+      // Track the share in analytics
+      if (user?.uid) {
+        await trackSocialShare(user.uid, 'native', {
+          postId: currentPostId,
+          includeTimestamp: true
+        });
+      }
     } else {
-      // If sharing is not supported, copy to clipboard
-      await navigator.clipboard.writeText(shareData.text);
+      // Fallback to clipboard if Web Share API is not available
+      await navigator.clipboard.writeText(shareText);
       toast.success('Caption copied to clipboard!');
     }
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return; // User cancelled sharing - no error message needed
+    if ((error as Error)?.name === 'AbortError') {
+      // User cancelled the share - no error message needed
+      console.log('Share cancelled by user');
+    } else {
+      console.error('Error sharing:', error);
+      toast.error('Failed to share content');
     }
-    console.error('Error sharing:', error);
-    toast.error('Failed to share content');
   } finally {
     setIsSharing(false);
   }
@@ -225,8 +334,8 @@ const handleDownload = async () => {
     // For media content, use the existing download logic
     await downloadPreview(
       previewRef,
-      selectedCaption,
-      formData.mediaType as MediaType
+      formData.mediaType as MediaType,
+      selectedCaption
     );
     toast.success('Downloaded successfully!');
   } catch (error) {
@@ -278,6 +387,7 @@ const handleDownload = async () => {
                     mediaUrl={formData.mediaUrl}
                     mediaType={formData.mediaType}
                     selectedCaption={selectedCaption}
+                    platform={formData.platform}  // Add this line to pass the selected platform
                     onShare={handleShare}
                     onDownload={handleDownload}
                   />
@@ -382,3 +492,7 @@ const handleDownload = async () => {
     </div>
   );
 }
+function createCaptionedVideo(video: HTMLVideoElement, selectedCaption: Caption) {
+  throw new Error('Function not implemented.');
+}
+
