@@ -39,7 +39,7 @@ export async function POST(request: Request) {
           throw new Error('No metadata found in session');
         }
         const metadata = session.metadata as unknown as StripeMetadata;
-        const { userId, userEmail, planType, interval } = metadata;
+        const { userId, planType, interval } = metadata;
 
         // Update user's subscription in Firestore
         const userRef = doc(db, 'users', userId);
@@ -72,15 +72,18 @@ export async function POST(request: Request) {
         break;
       }
 
-      case 'customer.subscription.updated':
+     case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const userRef = doc(db, 'users', subscription.metadata.userId);
-        
-        await setDoc(userRef, {
-          subscriptionStatus: subscription.status,
-          subscriptionEnd: subscription.status === 'canceled' ? new Date() : null,
-        }, { merge: true });
+        const subscription = event.data.object as any;
+        // Ensure subscription.metadata exists and has userId
+        if (subscription.metadata && subscription.metadata.userId) {
+          const userRef = doc(db, 'users', subscription.metadata.userId);
+          
+          await setDoc(userRef, {
+            subscriptionStatus: subscription.status,
+            subscriptionEnd: subscription.status === 'canceled' ? new Date() : null,
+          }, { merge: true });
+        }
         break;
       }
     }
