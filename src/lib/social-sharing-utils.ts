@@ -180,8 +180,55 @@ export const shareToSocialMedia = async (
       break;
     
     case 'linkedin':
-      // LinkedIn share URL
-      shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(mediaUrl || '')}&summary=${encodeURIComponent(fullCaption)}`;
+      // Create parameters for the share API
+      const shareParams = new URLSearchParams();
+      
+      // Extract title (first line of caption)
+      const captionLines = fullCaption.split('\n').filter(line => line.trim());
+      const captionTitle = captionLines.length > 0 ? captionLines[0] : 'EngagePerfect Caption';
+      
+      // Add parameters
+      shareParams.append('title', captionTitle);
+      shareParams.append('caption', fullCaption);
+      
+      // Extract CTA if it exists in the caption
+      const ctaMatch = fullCaption.match(/\n\n([^#].*?)(?=\n\n|$)/);
+      if (ctaMatch && ctaMatch[1]) {
+        shareParams.append('cta', ctaMatch[1].trim());
+      }
+      
+      // Extract hashtags
+      const hashtagsMatch = fullCaption.match(/#[\w\d]+/g);
+      let hashtags: string[] = [];
+      if (hashtagsMatch) {
+        hashtags = hashtagsMatch.map(tag => tag.substring(1)); // Remove # prefix
+      }
+      
+      // Format hashtags as JSON string
+      let hashtagsJson = '[]';
+      if (hashtags.length > 0) {
+        try {
+          hashtagsJson = JSON.stringify(hashtags);
+        } catch (e) {
+          console.error('Error stringifying hashtags:', e);
+        }
+      }
+      shareParams.append('hashtags', hashtagsJson);
+      
+      // Add media URL if available and valid
+      if (mediaUrl && !mediaUrl.startsWith('blob:')) {
+        shareParams.append('mediaUrl', mediaUrl);
+      }
+      
+      // Create share URL pointing to your server-rendered share page
+      const baseUrl = window.location.hostname.includes('localhost')
+        ? 'https://engageperfect.com'  // Use your production URL when testing
+        : window.location.origin;
+        
+      const shareableUrl = `${baseUrl}/share?${shareParams.toString()}`; // Updated path
+      
+      // LinkedIn sharing URL
+      shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareableUrl)}`;
       break;
     
     case 'instagram':

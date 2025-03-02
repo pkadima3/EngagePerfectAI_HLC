@@ -9,8 +9,9 @@ export type MediaType = 'image' | 'video' | 'text-only';
 export interface Caption {
   title: string;
   caption: string;
-  hashtags: string[];
+
   cta: string;
+  hashtags: string[];
 }
 
 // Add a new type for caption styles
@@ -29,8 +30,9 @@ export const createCaptionedVideo = async (
       const validatedCaption: Caption = {
         title: caption?.title || 'Untitled',
         caption: caption?.caption || '',
-        hashtags: Array.isArray(caption?.hashtags) ? caption.hashtags : [],
-        cta: caption?.cta || ''
+         cta: caption?.cta || '',
+        hashtags: Array.isArray(caption?.hashtags) ? caption.hashtags : []
+        //cta: caption?.cta || ''
       };
 
       // Create a canvas with space for video and caption (if standard style)
@@ -469,8 +471,7 @@ export const sharePreview = async (
     if (!sharableContent) throw new Error('Sharable content not found');
 
     // Format the caption text properly
-    const formattedCaption = `${caption.title}\n\n${caption.caption}\n\n${caption.cta}\n\n${caption.hashtags.map(tag => `#${tag}`).join(' ')}`;
-    
+    const formattedCaption = `${caption.title}\n\n${caption.caption}\n\n${caption.cta}\n\n${caption.hashtags.map(tag => `#${tag}`).join(' ')}`;    
     // Create basic share data
     const shareData: ShareData = {
       title: caption.title,
