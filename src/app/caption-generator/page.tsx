@@ -18,11 +18,12 @@ import { sharePreview, downloadPreview } from '@/lib/sharing-utils';
 import { MediaType } from '@/lib/sharing-utils';
 import html2canvas from 'html2canvas';
 //import { trackSocialShare } from '@/lib/social-sharing';
-import { doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+
+//TO BE USED IN THE FUTURE +++++++++++++++++++++++++++++++++
+/*import { doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';*/
 
 import { shareToSocialMedia, trackSocialShare } from '@/lib/social-sharing-utils';
-
 
 interface Caption {
   title: string;
@@ -151,7 +152,7 @@ const handleShare = async () => {
     // Create formatted caption text with all parts combined
     const captionText = `${selectedCaption.title}\n\n${selectedCaption.caption}\n\n${selectedCaption.hashtags.map(tag => `#${tag}`).join(' ')}\n\n${selectedCaption.cta}`;
     
-    // Determine if user is on free tier
+    // Add sharing logic here
     // Determine if user is on free tier (based on user object)
     let isFreeTier = true; // Default to free tier for now
     
@@ -195,18 +196,15 @@ const handleShare = async () => {
           if (!video) throw new Error('Video element not found');
           
           // Create captioned video
-          const shareToastId = toast.loading('Preparing video...');
+          const shareToastId = toast.loading('Creating captioned video...');
           
           try {
-            // For now, just use the original video without captions
-            const response = await fetch(video.src);
-            if (!response.ok) throw new Error('Failed to fetch video');
-            const videoBlob = await response.blob();
-            mediaFile = new File([videoBlob], `video-${Date.now()}.mp4`, { type: 'video/mp4' });
+            // Create a captioned video with the selected caption
+            mediaFile = await createCaptionedVideo(video, selectedCaption);
           } catch (captionError) {
             console.warn('Error creating captioned video, using original:', captionError);
             
-            // Option 2: Fallback to original video if captioning fails
+            // Fallback to original video if captioning fails
             const response = await fetch(video.src);
             if (!response.ok) throw new Error('Failed to fetch video');
             
@@ -492,7 +490,130 @@ const handleDownload = async () => {
     </div>
   );
 }
-function createCaptionedVideo(video: HTMLVideoElement, selectedCaption: Caption) {
-  throw new Error('Function not implemented.');
+
+async function createCaptionedVideo(video: HTMLVideoElement, selectedCaption: Caption): Promise<File> {
+  return new Promise((resolve, reject) => {
+    try {
+      // Create canvas elements
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Could not create canvas context');
+      }
+
+      // Match canvas size to video dimensions
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      // Set up MediaRecorder to capture the canvas
+      const stream = canvas.captureStream(30); // 30 FPS
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9', // Most compatible format
+        videoBitsPerSecond: 5000000 // 5 Mbps for good quality
+      });
+
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        // Combine recorded chunks into a single blob
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const file = new File([blob], `captioned-video-${Date.now()}.webm`, { 
+          type: 'video/webm'
+        });
+        resolve(file);
+      };
+
+      // Start recording
+      mediaRecorder.start();
+
+      // Format caption text
+      const captionText = selectedCaption.caption;
+      const hashtagsText = selectedCaption.hashtags.map(tag => `#${tag}`).join(' ');
+
+      // Helper function to draw a frame with caption
+      const drawFrame = () => {
+        if (video.ended || video.paused) {
+          mediaRecorder.stop();
+          return;
+        }
+
+        // Draw video frame
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Apply semi-transparent background for captions
+        const captionAreaHeight = canvas.height * 0.3; // Use 30% of height for caption area
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, canvas.height - captionAreaHeight, canvas.width, captionAreaHeight);
+
+        // Draw caption text
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${Math.round(canvas.height * 0.04)}px Arial`;
+        ctx.textAlign = 'center';
+
+        // Draw title at top
+        ctx.fillText(selectedCaption.title, canvas.width / 2, canvas.height - captionAreaHeight + 40);
+
+        // Draw caption text (may need to wrap)
+        const maxLineWidth = canvas.width * 0.9;
+        const lineHeight = Math.round(canvas.height * 0.05);
+        const words = captionText.split(' ');
+        let line = '';
+        let y = canvas.height - captionAreaHeight + 80;
+
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          
+          if (metrics.width > maxLineWidth && i > 0) {
+            ctx.fillText(line, canvas.width / 2, y);
+            line = words[i] + ' ';
+            y += lineHeight;
+            
+            // Prevent text from going off screen
+            if (y > canvas.height - 20) break;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, canvas.width / 2, y);
+
+        // Draw hashtags at bottom
+        ctx.font = `${Math.round(canvas.height * 0.03)}px Arial`;
+        ctx.fillText(hashtagsText, canvas.width / 2, canvas.height - 30);
+
+        // Request next frame
+        requestAnimationFrame(drawFrame);
+      };
+
+      // Handle video playback
+      video.addEventListener('play', () => {
+        drawFrame();
+      });
+
+      // Start video playback
+      video.currentTime = 0;
+      video.muted = false; // Keep original audio
+      video.play().catch(error => {
+        console.error('Video playback failed:', error);
+        mediaRecorder.stop();
+        reject(new Error('Failed to play video for processing'));
+      });
+
+      // Set timeout to stop recording if video is too long (max 60 seconds)
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          video.pause();
+          mediaRecorder.stop();
+        }
+      }, 60000);
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 

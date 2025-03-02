@@ -72,9 +72,9 @@ export async function POST(request: Request) {
         break;
       }
 
-     case 'customer.subscription.updated':
+      case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as any;
+        const subscription = event.data.object as Stripe.Subscription;
         // Ensure subscription.metadata exists and has userId
         if (subscription.metadata && subscription.metadata.userId) {
           const userRef = doc(db, 'users', subscription.metadata.userId);
