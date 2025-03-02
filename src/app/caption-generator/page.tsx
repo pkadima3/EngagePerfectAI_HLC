@@ -13,8 +13,8 @@ import { GeneratedCaptions } from '@/components/CaptionWizard/GeneratedCaptions'
 import { CaptionPreview } from '@/components/CaptionWizard/CaptionPreview';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-toastify';
-import { sharePreview, downloadPreview } from '@/lib/sharing-utils';
-
+//import { sharePreview, downloadPreview } from '@/lib/sharing-utils';
+import { downloadPreview } from '@/lib/sharing-utils';
 import { MediaType } from '@/lib/sharing-utils';
 import html2canvas from 'html2canvas';
 //import { trackSocialShare } from '@/lib/social-sharing';
@@ -23,7 +23,8 @@ import html2canvas from 'html2canvas';
 /*import { doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';*/
 
-import { shareToSocialMedia, trackSocialShare } from '@/lib/social-sharing-utils';
+//import { shareToSocialMedia, trackSocialShare } from '@/lib/social-sharing-utils';
+import { trackSocialShare } from '@/lib/social-sharing-utils';
 
 interface Caption {
   title: string;
@@ -51,8 +52,9 @@ export default function CaptionGenerator() {
   const [generatedCaptions, setGeneratedCaptions] = useState<Caption[]>([]);
   const [selectedCaption, setSelectedCaption] = useState<Caption | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const [currentPostId, setCurrentPostId] = useState<string | undefined>(undefined);
-
+  //const [currentPostId, setCurrentPostId] = useState<string | undefined>(undefined);
+  //const [_isSharing, setIsSharing] = useState(false);
+  const [currentPostId, _setCurrentPostId] = useState<string | undefined>(undefined);
   const steps = [
     {
       title: 'Upload Media',

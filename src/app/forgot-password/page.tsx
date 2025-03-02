@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthCard 
       title="Forgot password?" 
-      subtitle="No worries, we'll send you reset instructions"
+      subtitle="Don&apos;t worry if you&apos;ve forgotten..."
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <AuthInput
