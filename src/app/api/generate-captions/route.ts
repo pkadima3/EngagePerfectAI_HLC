@@ -11,11 +11,12 @@ export async function POST(req: Request) {
     const { platform, niche, tone, goal, mediaType, mediaContext } = body;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "user",
-          content: `Generate captions for ${platform} in the ${niche} niche with a ${tone} tone...`
+          content: `Generate captions for ${platform} in the ${niche} niche with a ${tone} tone. 
+                    The goal is to ${goal}. This is for a ${mediaType} post with the following context: ${mediaContext}`
         }
       ],
       temperature: 0.7,
